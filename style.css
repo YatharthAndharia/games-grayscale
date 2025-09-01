@@ -1,0 +1,74 @@
+/* General Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Arial", sans-serif;
+}
+
+/* Background */
+body {
+  background: linear-gradient(135deg, #333, #111);
+  color: #eee;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  animation: fadeIn 2s ease-in-out;
+}
+
+/* Container */
+.container {
+  text-align: center;
+}
+
+/* Title & Subtitle */
+.title {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  color: #fff;
+  animation: slideDown 1.5s ease-in-out;
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+  color: #ccc;
+  animation: fadeIn 2.5s ease-in-out;
+}
+
+/* Game Cards */
+.game-grid {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+.game-card {
+  background: #222;
+  border: 2px solid #555;
+  padding: 20px 40px;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  color: #eee;
+  text-decoration: none;
+  transition: all 0.3s ease-in-out;
+}
+
+.game-card:hover {
+  background: #444;
+  border-color: #999;
+  transform: scale(1.1);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+

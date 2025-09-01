@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Tic Tac Toe — Grayscale</title>
+<style>
+  :root{
+    --bg:#f5f5f6;
+    --panel:#ececec;
+    --accent:#bdbdbd;
+    --line:#9e9e9e;
+    --text:#222;
+    --cell-bg:#fff;
+    --x-color:#2b2b2b;
+    --o-color:#4b4b4b;
+    --win-glow: 0 6px 30px rgba(0,0,0,0.12);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+
+  html,body{
+    height:100%;
+    margin:0;
+    background: linear-gradient(180deg,var(--bg), #e9e9ea);
+    color:var(--text);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .app {
+    width: min(720px, 94vw);
+    background: linear-gradient(180deg,var(--panel), #f6f6f7);
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: var(--win-glow);
+    border: 1px solid rgba(0,0,0,0.06);
+    position:relative;
+    overflow:visible;
+  }
+
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom: 14px;
+  }
+
+  h1{
+    margin:0;
+    font-size:1.2rem;
+    letter-spacing:0.6px;
+    color:var(--x-color);
+  }
+
+  .status {
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+
+  .player-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 10px;
+    border-radius:999px;
+    background:linear-gradient(180deg,#ffffff,#f1f1f1);
+    border:1px solid rgba(0,0,0,0.04);
+    font-weight:600;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  }
+
+  .player-icon{
+    width:26px;height:26px;border-radius:6px;
+    display:inline-grid;place-items:center;
+    font-weight:700;font-size:14px;
+  }
+
+  .player-x .player-icon{ background:#dedede; color:var(--x-color); }
+  .player-o .player-icon{ background:#cdcdcd; color:var(--o-color); }
+
+  main{
+    display:flex;
+    gap:20px;
+    align-items:stretch;
+    flex-wrap:wrap;
+  }
+
+  .board-wrap{
+    flex:1 1 360px;
+    min-width:260px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .board {
+    width: 360px;
+    max-width: 88vw;
+    aspect-ratio: 1/1;
+    display:grid;
+    grid-template-columns: repeat(3,1fr);
+    grid-template-rows: repeat(3,1fr);
+    gap:12px;
+    padding:12px;
+    background: linear-gradient(180deg,#ffffff,#fbfbfb);
+    border-radius:12px;
+    border: 1px solid rgba(0,0,0,0.06);
+    box-sizing:border-box;
+  }
+
+  .cell{
+    background: var(--cell-bg);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size: clamp(28px, 8vw, 56px);
+    font-weight:800;
+    user-select:none;
+    cursor:pointer;
+    border-radius:8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    transition: transform .12s ease, box-shadow .12s ease, background .15s ease;
+    border:1px solid rgba(0,0,0,0.03);
+  }
+
+  .cell:hover { transform: translateY(-4px); box-shadow: 0 8px 22px rgba(0,0,0,0.06); }
+  .cell.disabled { cursor:default; transform:none; opacity:.9; pointer-events:none; }
+
+  .cell.x { color: var(--x-color); }
+  .cell.o { color: var(--o-color); }
+
+  .controls{
+    width:240px;
+    min-width:200px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    align-items:stretch;
+    justify-content:flex-start;
+  }
+
+  .panel {
+    padding:12px;
+    border-radius:10px;
+    background:linear-gradient(180deg,#fafafa,#f4f4f4);
+    border:1px solid rgba(0,0,0,0.04);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  }
+
+  .big {
+    font-size:1.05rem;
+    font-weight:700;
+  }
+
+  button {
+    appearance:none;
+    border: none;
+    padding:10px 12px;
+    border-radius:8px;
+    background:var(--accent);
+    color:#111;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+  }
+
+  button.ghost {
+    background:transparent;
+    border:1px solid rgba(0,0,0,0.06);
+  }
+
+  .small {
+    font-size:.9rem;
+    padding:8px 10px;
+  }
+
+  .hint { font-size:.9rem; color:#666; }
+
+  /* Winner overlay */
+  .overlay {
+    position:absolute;
+    inset:0;
+    display:grid;
+    place-items:center;
+    pointer-events:none;
+  }
+
+  .winner-card {
+    pointer-events:auto;
+    min-width:280px;
+    padding:18px;
+    border-radius:12px;
+    background:linear-gradient(180deg,#ffffff,#f4f4f4);
+    border:1px solid rgba(0,0,0,0.06);
+    text-align:center;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.12);
+    transform: translateY(-8px);
+  }
+
+  .winner-title { font-size:1.1rem; font-weight:800; margin-bottom:8px; }
+  .winner-sub { font-size:.95rem; color:#4a4a4a; margin-bottom:12px; }
+
+  /* Confetti pieces (grayscale) */
+  .confetti {
+    pointer-events:none;
+    position:absolute;
+    inset:0;
+    overflow:visible;
+  }
+  .confetti-piece {
+    position:absolute;
+    width:12px;
+    height:12px;
+    border-radius:2px;
+    opacity:0.95;
+    transform-origin:center;
+    animation-name: fallSpin;
+    animation-iteration-count: 1;
+    animation-timing-function: linear;
+    will-change: transform, top, left, opacity;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.06));
+  }
+
+  @keyframes fallSpin {
+    0% { transform: translateY(-10vh) rotate(0deg); opacity:1; }
+    70% { opacity:1; }
+    100% { transform: translateY(110vh) rotate(540deg); opacity:0.02; }
+  }
+
+  /* Winning strike line */
+  .strike {
+    position:absolute;
+    height:6px;
+    background: linear-gradient(90deg,#9e9e9e,#6f6f6f);
+    border-radius:6px;
+    transform-origin:center;
+    transition: transform .45s cubic-bezier(.2,.9,.2,1), opacity .35s;
+    opacity:0;
+    pointer-events:none;
+  }
+
+  /* pulse winning cells */
+  .cell.win {
+    animation: pulse 900ms ease forwards;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+  }
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+    100% { transform: scale(1); }
+  }
+
+  /* responsive tweaks */
+  @media (max-width:520px){
+    .board { gap:8px; padding:8px; }
+    .app { padding:12px; border-radius:10px; }
+    .controls { width:100%; }
+    main{ gap:12px; flex-direction:column-reverse; }
+  }
+
+</style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="Tic Tac Toe game">
+    <header>
+      <h1>Tic Tac Toe — Grayscale</h1>
+      <div class="status" aria-live="polite">
+        <div class="player-badge player-x" id="badgeX"><span class="player-icon">X</span> Player X</div>
+        <div class="player-badge player-o" id="badgeO"><span class="player-icon">O</span> Player O</div>
+      </div>
+    </header>
+
+    <main>
+      <div class="board-wrap">
+        <div class="board" id="board" aria-label="tic tac toe board" role="grid" tabindex="0">
+          <!-- 9 cells -->
+          <div class="cell" role="button" data-index="0" aria-label="cell 1"></div>
+          <div class="cell" role="button" data-index="1" aria-label="cell 2"></div>
+          <div class="cell" role="button" data-index="2" aria-label="cell 3"></div>
+          <div class="cell" role="button" data-index="3" aria-label="cell 4"></div>
+          <div class="cell" role="button" data-index="4" aria-label="cell 5"></div>
+          <div class="cell" role="button" data-index="5" aria-label="cell 6"></div>
+          <div class="cell" role="button" data-index="6" aria-label="cell 7"></div>
+          <div class="cell" role="button" data-index="7" aria-label="cell 8"></div>
+          <div class="cell" role="button" data-index="8" aria-label="cell 9"></div>
+
+          <!-- strike line -->
+          <div id="strike" class="strike" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="panel">
+          <div class="big">Turn: <span id="turnLabel">X</span></div>
+          <div class="hint" id="hint">Player X starts. Click any cell to place your mark.</div>
+        </div>
+
+        <div class="panel">
+          <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
+            <div style="font-weight:700">Game</div>
+            <div style="font-size:.9rem;color:#666" id="scoreText">Moves: 0</div>
+          </div>
+          <div style="height:10px"></div>
+          <div style="display:flex;gap:8px;">
+            <button id="restartBtn" class="ghost small">Restart</button>
+            <button id="resetBtn" class="small">Reset Board</button>
+          </div>
+        </div>
+
+        <div class="panel" style="text-align:center;color:#555;font-size:.95rem;">
+          Local two-player — take turns. Winner is celebrated with an animation 🎉 (grayscale style).
+        </div>
+      </div>
+    </main>
+
+    <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+    <div class="confetti" id="confetti" aria-hidden="true"></div>
+  </div>
+
+<script>
+(function(){
+  const boardEl = document.getElementById('board');
+  const cells = Array.from(boardEl.querySelectorAll('.cell'));
+  const turnLabel = document.getElementById('turnLabel');
+  const hint = document.getElementById('hint');
+  const overlay = document.getElementById('overlay');
+  const confettiRoot = document.getElementById('confetti');
+  const strike = document.getElementById('strike');
+  const restartBtn = document.getElementById('restartBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const scoreText = document.getElementById('scoreText');
+
+  // Game state
+  let boardState = Array(9).fill(null); // 'X' or 'O' or null
+  let current = 'X';
+  let moves = 0;
+  let running = true;
+
+  const winningCombos = [
+    [0,1,2],
+    [3,4,5],
+    [6,7,8],
+    [0,3,6],
+    [1,4,7],
+    [2,5,8],
+    [0,4,8],
+    [2,4,6]
+  ];
+
+  function render() {
+    cells.forEach((cell, i) => {
+      const v = boardState[i];
+      cell.classList.remove('x','o','win','disabled');
+      if (v) {
+        cell.textContent = v;
+        cell.classList.add(v.toLowerCase());
+        cell.classList.add('disabled');
+      } else {
+        cell.textContent = '';
+      }
+    });
+    turnLabel.textContent = current;
+    scoreText.textContent = `Moves: ${moves}`;
+    badgeActive();
+  }
+
+  function badgeActive(){
+    document.getElementById('badgeX').style.opacity = current === 'X' ? '1' : '0.6';
+    document.getElementById('badgeO').style.opacity = current === 'O' ? '1' : '0.6';
+  }
+
+  function handleCellClick(e){
+    if (!running) return;
+    const idx = Number(e.currentTarget.dataset.index);
+    if (boardState[idx]) return;
+    boardState[idx] = current;
+    moves++;
+    checkGame();
+    if (running) {
+      current = current === 'X' ? 'O' : 'X';
+      hint.textContent = `Player ${current}'s turn.`;
+    }
+    render();
+  }
+
+  cells.forEach(c => c.addEventListener('click', handleCellClick));
+
+  function checkGame(){
+    // check for win
+    for (const combo of winningCombos) {
+      const [a,b,c] = combo;
+      if (boardState[a] && boardState[a] === boardState[b] && boardState[a] === boardState[c]) {
+        finishGame(boardState[a], combo);
+        return;
+      }
+    }
+    // check tie
+    if (moves >= 9) {
+      finishTie();
+      return;
+    }
+  }
+
+  function finishGame(winner, combo){
+    running = false;
+    hint.textContent = `Player ${winner} wins!`;
+    // highlight winning cells
+    combo.forEach(i => {
+      cells[i].classList.add('win');
+    });
+    // show strike line
+    drawStrike(combo);
+    // celebration
+    celebrate(winner);
+    // show overlay card
+    showWinnerCard(winner);
+  }
+
+  function finishTie(){
+    running = false;
+    hint.textContent = `It's a tie!`;
+    showTieCard();
+  }
+
+  function drawStrike(combo){
+    // compute bounding boxes over the board
+    const rect = boardEl.getBoundingClientRect();
+    const cellRect = cells[0].getBoundingClientRect();
+    // compute center positions of the first and last cell in combo
+    const first = cells[combo[0]].getBoundingClientRect();
+    const last = cells[combo[2]].getBoundingClientRect();
+
+    // center coords relative to board
+    const cx1 = (first.left + first.right)/2 - rect.left;
+    const cy1 = (first.top + first.bottom)/2 - rect.top;
+    const cx2 = (last.left + last.right)/2 - rect.left;
+    const cy2 = (last.top + last.bottom)/2 - rect.top;
+
+    const dx = cx2 - cx1;
+    const dy = cy2 - cy1;
+    const length = Math.hypot(dx, dy);
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+    strike.style.width = Math.max(length + 40, 40) + "px";
+    strike.style.left = (cx1 + cx2)/2 - (length+40)/2 + "px";
+    strike.style.top = (cy1 + cy2)/2 - 3 + "px";
+    strike.style.transform = `rotate(${angle}deg) scaleX(0.01)`;
+    strike.style.opacity = "1";
+
+    // animate scale to full
+    requestAnimationFrame(()=> {
+      strike.style.transition = "transform .45s cubic-bezier(.2,.9,.2,1), opacity .25s";
+      strike.style.transform = `rotate(${angle}deg) scaleX(1)`;
+    });
+  }
+
+  function celebrate(winner){
+    // grayscale confetti
+    confettiRoot.innerHTML = '';
+    confettiRoot.style.pointerEvents = 'none';
+    const count = 30;
+    const w = window.innerWidth;
+    for (let i=0;i<count;i++){
+      const el = document.createElement('div');
+      el.className = 'confetti-piece';
+      const left = Math.random() * 100; // percent
+      const size = 8 + Math.random()*16;
+      el.style.width = el.style.height = size + 'px';
+      el.style.left = left + 'vw';
+      el.style.top = (-10 - Math.random()*5) + 'vh';
+
+      // grayscale shade
+      const shade = Math.floor(40 + Math.random()*160); // 40..200
+      el.style.background = `rgb(${shade},${shade},${shade})`;
+
+      const dur = 1200 + Math.random()*1600;
+      el.style.animationDuration = dur + 'ms';
+      el.style.animationDelay = (Math.random()*120) + 'ms';
+      el.style.transform = `rotate(${Math.random()*360}deg)`;
+      confettiRoot.appendChild(el);
+
+      // remove after animation
+      setTimeout(()=> {
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+      }, dur + 400);
+    }
+  }
+
+  function showWinnerCard(winner){
+    overlay.innerHTML = `
+      <div class="winner-card" role="dialog" aria-modal="true" aria-label="Winner">
+        <div class="winner-title">Player ${winner} Wins!</div>
+        <div class="winner-sub">Nice play — well deserved.</div>
+        <div style="display:flex;gap:8px;justify-content:center;">
+          <button id="playAgain" class="small">Play Again</button>
+          <button id="closeOverlay" class="ghost small">Close</button>
+        </div>
+      </div>
+    `;
+    overlay.style.pointerEvents = 'auto';
+    overlay.setAttribute('aria-hidden','false');
+
+    document.getElementById('playAgain').addEventListener('click', restartGame);
+    document.getElementById('closeOverlay').addEventListener('click', hideOverlay);
+  }
+
+  function showTieCard(){
+    overlay.innerHTML = `
+      <div class="winner-card" role="dialog" aria-modal="true" aria-label="Tie">
+        <div class="winner-title">It's a tie!</div>
+        <div class="winner-sub">No winners this time — try again.</div>
+        <div style="display:flex;gap:8px;justify-content:center;">
+          <button id="playAgain" class="small">Play Again</button>
+          <button id="closeOverlay" class="ghost small">Close</button>
+        </div>
+      </div>
+    `;
+    overlay.style.pointerEvents = 'auto';
+    overlay.setAttribute('aria-hidden','false');
+
+    document.getElementById('playAgain').addEventListener('click', restartGame);
+    document.getElementById('closeOverlay').addEventListener('click', hideOverlay);
+  }
+
+  function hideOverlay(){
+    overlay.innerHTML = '';
+    overlay.style.pointerEvents = 'none';
+    overlay.setAttribute('aria-hidden','true');
+  }
+
+  function restartGame(){
+    boardState = Array(9).fill(null);
+    current = 'X';
+    moves = 0;
+    running = true;
+    strike.style.opacity = '0';
+    strike.style.transform = 'scaleX(0)';
+    confettiRoot.innerHTML = '';
+    hideOverlay();
+    render();
+    hint.textContent = `Player ${current} starts.`;
+    // remove win class
+    cells.forEach(c => c.classList.remove('win'));
+  }
+
+  // Reset board but keep current starting player and move counter?
+  function resetBoard(){
+    // small difference from restart: only clear board, keep same current value (so next turn is same)
+    boardState = Array(9).fill(null);
+    moves = 0;
+    running = true;
+    strike.style.opacity = '0';
+    strike.style.transform = 'scaleX(0)';
+    confettiRoot.innerHTML = '';
+    hideOverlay();
+    cells.forEach(c => c.classList.remove('win'));
+    render();
+    hint.textContent = `Player ${current}, your move.`;
+  }
+
+  // initialize
+  restartBtn.addEventListener('click', restartGame);
+  resetBtn.addEventListener('click', resetBoard);
+
+  // keyboard controls: number keys 1-9 map to cells 0..8
+  document.addEventListener('keydown', (e) => {
+    if (!running) return;
+    const code = e.key;
+    if (/^[1-9]$/.test(code)) {
+      const idx = Number(code) - 1;
+      if (boardState[idx] === null) {
+        cells[idx].click();
+      }
+    }
+    // R to restart
+    if (code.toLowerCase() === 'r') restartGame();
+  });
+
+  // initial render
+  render();
+
+  // accessibility: focus ring on board to allow keyboard activation
+  boardEl.addEventListener('keydown', (e) => {
+    // allow Enter or Space to toggle focused cell
+    if (['Enter',' '].includes(e.key)) {
+      const active = document.activeElement;
+      if (active && active.classList.contains('cell')) {
+        active.click();
+      }
+    }
+  });
+
+  // make cells focusable for keyboard navigation
+  cells.forEach(c => c.setAttribute('tabindex','0'));
+
+  // small visual when window is resized (recompute strike if needed)
+  window.addEventListener('resize', () => {
+    // hide strike on resize to avoid mispositioning, it will reappear after next win
+    strike.style.opacity = '0';
+  });
+
+})();
+</script>
+</body>
+</html>
+

@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Snake — Grayscale Edition</title>
+<style>
+  :root{
+    --bg-0:#0f0f10; --bg-1:#161617; --bg-2:#1e1e20; --bg-3:#262628;
+    --fg-0:#f2f2f3; --fg-1:#cfcfd2; --fg-2:#a7a7ad; --accent:#9e9ea1;
+    --good:#d9d9dc; --warn:#b3b3b8; --grid:#2e2e31;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    color:var(--fg-0);
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,Helvetica,sans-serif;
+    background:
+      radial-gradient(1200px 800px at 100% -20%, #1b1b1d 0%, transparent 60%),
+      radial-gradient(900px 700px at -10% 110%, #1a1a1c 0%, transparent 55%),
+      linear-gradient(180deg,var(--bg-1),var(--bg-0));
+    letter-spacing:.2px;
+    display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .frame{
+    width:min(92vw,720px);
+    background:linear-gradient(180deg,var(--bg-2),var(--bg-3));
+    border:1px solid #2f2f32;
+    border-radius:20px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.03);
+    padding:18px 18px 14px;
+  }
+  .row{display:flex; gap:14px; align-items:stretch}
+  .left{flex:1; min-width:0}
+  .panel{
+    background:linear-gradient(180deg,#1b1b1d,#171719);
+    border:1px solid #2b2b2e;
+    border-radius:16px;
+    padding:12px 14px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+  }
+  .stats{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .stat{
+    background:linear-gradient(180deg,#1c1c1e,#151517);
+    border:1px solid #2a2a2d;
+    border-radius:12px;
+    padding:8px 10px;
+    text-align:center;
+  }
+  .stat .label{color:var(--fg-2); font-size:12px}
+  .stat .value{font-weight:700; font-size:18px}
+
+  .canvas-wrap{
+    position:relative;
+    border-radius:14px; overflow:hidden;
+    border:1px solid #2b2b2e;
+    background:
+      linear-gradient(180deg,#19191b,#121214);
+  }
+  canvas{display:block; width:100%; height:auto; image-rendering:pixelated}
+  /* subtle grid overlay */
+  .grid{
+    position:absolute; inset:0; pointer-events:none;
+    background-image:
+      linear-gradient(to right, var(--grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+    background-size:20px 20px;
+    mix-blend-mode:overlay; opacity:.35;
+  }
+
+  .right{
+    width:230px; display:flex; flex-direction:column; gap:14px;
+  }
+  .title{font-weight:800; letter-spacing:.6px; font-size:18px; color:var(--fg-1)}
+
+  .controls .kbd{
+    display:inline-block; min-width:28px; padding:6px 8px; margin:2px;
+    text-align:center; border-radius:8px; border:1px solid #2b2b2e;
+    background:linear-gradient(180deg,#1a1a1c,#131315);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+  }
+  .btnbar{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px}
+  button{
+    appearance:none; border:1px solid #2b2b2e; cursor:pointer;
+    background:linear-gradient(180deg,#202024,#161618);
+    color:var(--fg-0); padding:8px 12px; border-radius:10px;
+    font-weight:700;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.03), 0 2px 8px rgba(0,0,0,.25);
+    transition:transform .06s ease, box-shadow .2s ease, background .2s ease;
+  }
+  button:hover{transform:translateY(-1px)}
+  button:active{transform:translateY(0)}
+  .pill{
+    font-size:12px; padding:5px 8px; border-radius:999px; display:inline-block;
+    border:1px solid #2b2b2e; background:linear-gradient(180deg,#1b1b1d,#141416);
+  }
+
+  /* Banners & overlays */
+  .banner{
+    position:absolute; left:50%; top:12px; transform:translateX(-50%);
+    padding:8px 14px; border-radius:999px; border:1px solid #2b2b2e;
+    background:linear-gradient(180deg,#1f1f22,#151518);
+    color:var(--fg-1); font-weight:700; font-size:14px;
+    box-shadow:0 10px 24px rgba(0,0,0,.35);
+    opacity:0; pointer-events:none;
+  }
+  .banner.show{animation:popfade .6s ease forwards}
+  @keyframes popfade{
+    0%{transform:translateX(-50%) translateY(-8px) scale(.96); opacity:0}
+    50%{transform:translateX(-50%) translateY(0) scale(1.02); opacity:1}
+    100%{transform:translateX(-50%) translateY(0) scale(1); opacity:1}
+  }
+
+  .overlay{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(80% 60% at 50% 50%, rgba(0,0,0,.45), rgba(0,0,0,.75));
+    opacity:0; pointer-events:none;
+  }
+  .overlay.show{opacity:1; pointer-events:auto; animation:fadein .35s ease forwards}
+  @keyframes fadein{from{opacity:0} to{opacity:1}}
+
+  .overlay .msg{
+    text-align:center;
+    padding:22px 24px; border-radius:16px;
+    border:1px solid #2b2b2e;
+    background:linear-gradient(180deg,#1f1f22,#151518);
+    box-shadow:0 16px 40px rgba(0,0,0,.5);
+    min-width:60%;
+  }
+  .overlay h1{
+    margin:0 0 8px; font-size:40px; letter-spacing:1px;
+    animation:pulse 1.2s ease-in-out infinite;
+  }
+  .overlay p{margin:0 0 14px; color:var(--fg-1)}
+  @keyframes pulse{
+    0%{transform:scale(1); text-shadow:0 0 0 rgba(255,255,255,0)}
+    50%{transform:scale(1.03); text-shadow:0 0 20px rgba(255,255,255,.05)}
+    100%{transform:scale(1)}
+  }
+
+  .legend{font-size:12px; color:var(--fg-2)}
+  .perk-line{display:flex; align-items:center; justify-content:space-between; gap:8px}
+  .meter{
+    position:relative; height:8px; background:#171719; border:1px solid #2a2a2d;
+    border-radius:999px; overflow:hidden;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+  }
+  .meter > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,#c7c7cc,#808089)}
+  footer{margin-top:10px; text-align:center; color:var(--fg-2); font-size:12px}
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="row">
+      <div class="left">
+        <div class="panel">
+          <div class="stats">
+            <div class="stat">
+              <div class="label">Score</div>
+              <div class="value" id="score">0</div>
+            </div>
+            <div class="stat">
+              <div class="label">Speed</div>
+              <div class="value"><span id="speed">1.0</span>x</div>
+            </div>
+            <div class="stat">
+              <div class="label">Target</div>
+              <div class="value">30</div>
+            </div>
+          </div>
+
+          <div class="canvas-wrap">
+            <div id="perkBanner" class="banner">Perk!</div>
+            <canvas id="game" width="400" height="400" aria-label="Snake game board"></canvas>
+            <div class="grid"></div>
+
+            <div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-hidden="true">
+              <div class="msg">
+                <h1 id="overlayTitle">You Win!</h1>
+                <p id="overlayDesc">Press <span class="pill">R</span> to restart</p>
+                <div class="btnbar" style="justify-content:center">
+                  <button id="btnRestart">Restart (R)</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="perk-line" style="margin-top:10px">
+            <div><span class="pill">Perk</span> <span id="perkName">None</span></div>
+            <div style="flex:1"></div>
+            <div class="meter" style="width:40%">
+              <i id="perkMeter"></i>
+            </div>
+          </div>
+          <div class="legend" style="margin-top:6px">
+            Next perk in <span id="perkCountdown">60</span>s
+          </div>
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="panel">
+          <div class="title">Controls</div>
+          <div style="margin:8px 0 6px">
+            <span class="kbd">↑</span><span class="kbd">↓</span><span class="kbd">←</span><span class="kbd">→</span>
+            <span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span>
+          </div>
+          <div class="btnbar">
+            <button id="btnPause">Pause (Space)</button>
+            <button id="btnRestart2">Restart</button>
+          </div>
+          <div class="legend" style="margin-top:6px">
+            Eat food ▢ to grow. Reach 30 points to win.
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="title">Perks (every 60s)</div>
+          <ul class="legend" style="margin:8px 0 0 18px; line-height:1.5">
+            <li><b>Double Points</b> — 2× score for 15s.</li>
+            <li><b>Slow Motion</b> — Snake slows ~40% for 15s.</li>
+            <li><b>Shrink</b> — Instantly lose 3 tail segments.</li>
+            <li><b>Food Frenzy</b> — Extra snacks for 10s.</li>
+            <li><b>Wall Portals</b> — Wrap through edges for 20s.</li>
+          </ul>
+        </div>
+
+        <div class="panel">
+          <div class="title">Tips</div>
+          <div class="legend" style="margin-top:6px">
+            Space to pause/resume. Avoid your own tail unless you like dramatic grayscale explosions.
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer>Built with pure HTML, CSS & JS — grayscale only.</footer>
+  </div>
+
+<script>
+(() => {
+  // ====== Config ======
+  const GRID = 20;                // 20x20 grid
+  const CELL = 20;                // 20px per cell
+  const CANVAS_SIZE = GRID * CELL;
+  const BASE_TPS = 10;            // base ticks per second
+  const WIN_SCORE = 30;
+  const PERK_INTERVAL = 60_000;   // every 60s
+  const COLORS = {
+    snakeHead: "#f2f2f3",
+    snakeBody: "#cfcfd2",
+    food: "#d0d0d4",
+    bonusFood: "#e5e5e7",
+    wallFlash: "#808089"
+  };
+
+  // ====== State ======
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const speedEl = document.getElementById('speed');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlayDesc = document.getElementById('overlayDesc');
+  const perkBanner = document.getElementById('perkBanner');
+  const perkNameEl = document.getElementById('perkName');
+  const perkMeter = document.getElementById('perkMeter');
+  const perkCountdownEl = document.getElementById('perkCountdown');
+
+  let rng = (min, max) => Math.floor(Math.random()*(max-min+1))+min;
+
+  function randomFreeCell(excludeSet){
+    let x,y,key,tries=0;
+    do{
+      x = rng(0, GRID-1);
+      y = rng(0, GRID-1);
+      key = `${x},${y}`;
+      tries++;
+      if(tries>1000) break;
+    } while(excludeSet.has(key));
+    return {x,y};
+  }
+
+  function initGame(){
+    state = {
+      snake: [{x:10,y:10},{x:9,y:10},{x:8,y:10}],
+      dir: {x:1,y:0},
+      nextDir: {x:1,y:0},
+      food: {x:15,y:10},
+      extraFoods: [],
+      score: 0,
+      alive: true,
+      paused: false,
+      tps: BASE_TPS,
+      wrapWalls: false,
+      scoreMul: 1,
+      perk: null,
+      perkEndsAt: 0,
+      nextPerkAt: performance.now() + PERK_INTERVAL,
+      lastTick: performance.now(),
+      acc: 0,
+      lastFrame: performance.now(),
+      wallFlash: 0, // ms
+      particles: [],
+    };
+    scoreEl.textContent = state.score;
+    speedEl.textContent = "1.0";
+    perkNameEl.textContent = "None";
+    perkMeter.style.width = "0%";
+    const now = performance.now();
+    state.nextPerkAt = now + PERK_INTERVAL;
+    overlay.classList.remove('show');
+    overlay.setAttribute('aria-hidden','true');
+    spawnFood();
+    draw(true);
+  }
+
+  function showOverlay(title, desc){
+    overlayTitle.textContent = title;
+    overlayDesc.innerHTML = desc;
+    overlay.classList.add('show');
+    overlay.setAttribute('aria-hidden','false');
+  }
+
+  // ====== Input ======
+  const KEY_DIR = {
+    ArrowUp:{x:0,y:-1}, ArrowDown:{x:0,y:1}, ArrowLeft:{x:-1,y:0}, ArrowRight:{x:1,y:0},
+    w:{x:0,y:-1}, s:{x:0,y:1}, a:{x:-1,y:0}, d:{x:1,y:0}
+  };
+  window.addEventListener('keydown', e=>{
+    if(e.key === ' '){ togglePause(); e.preventDefault(); return; }
+    if(e.key === 'r' || e.key === 'R'){ restart(); return; }
+    const nd = KEY_DIR[e.key];
+    if(!nd || !state.alive || state.paused) return;
+    // prevent reversing into itself
+    if(state.dir.x + nd.x === 0 && state.dir.y + nd.y === 0) return;
+    state.nextDir = nd;
+  });
+
+  // ====== Game core ======
+  let state; // defined in initGame()
+
+  function spawnFood(){
+    const occupied = new Set(state.snake.map(s=>`${s.x},${s.y}`));
+    for(const f of state.extraFoods) occupied.add(`${f.x},${f.y}`);
+    const p = randomFreeCell(occupied);
+    state.food = p;
+  }
+
+  function addParticles(x, y, count=24, power=2){
+    for(let i=0;i<count;i++){
+      state.particles.push({
+        x: x*CELL + CELL/2, y: y*CELL + CELL/2,
+        vx: (Math.random()*2-1)*power, vy:(Math.random()*2-1)*power,
+        life: 600 + Math.random()*400,
+        age: 0,
+        size: 1 + Math.random()*2
+      });
+    }
+  }
+
+  function tick(dtMs){
+    if(!state.alive || state.paused) return;
+
+    // manage perk expiration
+    const now = performance.now();
+    if(state.perk && now >= state.perkEndsAt){
+      endPerk();
+    }
+    // perk countdown UI
+    const untilNextPerk = Math.max(0, state.nextPerkAt - now);
+    perkCountdownEl.textContent = Math.ceil(untilNextPerk/1000);
+
+    if(untilNextPerk===0){
+      triggerRandomPerk();
+      state.nextPerkAt = now + PERK_INTERVAL;
+    }
+
+    // time step based on tps
+    state.acc += dtMs;
+    const msPerTick = 1000 / state.tps;
+    while(state.acc >= msPerTick){
+      step();
+      state.acc -= msPerTick;
+    }
+  }
+
+  function step(){
+    state.dir = state.nextDir;
+    const head = {x: state.snake[0].x + state.dir.x, y: state.snake[0].y + state.dir.y};
+
+    // walls
+    if(state.wrapWalls){
+      if(head.x < 0) head.x = GRID-1;
+      if(head.x >= GRID) head.x = 0;
+      if(head.y < 0) head.y = GRID-1;
+      if(head.y >= GRID) head.y = 0;
+    } else {
+      if(head.x < 0 || head.x >= GRID || head.y < 0 || head.y >= GRID){
+        explode(head);
+        gameOver(false);
+        return;
+      }
+    }
+
+    // self collision
+    for(let i=0;i<state.snake.length;i++){
+      if(state.snake[i].x===head.x && state.snake[i].y===head.y){
+        explode(head);
+        gameOver(false);
+        return;
+      }
+    }
+
+    state.snake.unshift(head);
+
+    let ate = (head.x===state.food.x && head.y===state.food.y);
+    let ateBonusIndex = -1;
+    for(let i=0;i<state.extraFoods.length;i++){
+      const f = state.extraFoods[i];
+      if(f.x===head.x && f.y===head.y){ ateBonusIndex = i; break; }
+    }
+
+    if(ate){
+      addParticles(head.x, head.y, 18, 2.5);
+      const pts = (state.perk?.id === 'double') ? 2 : 1;
+      state.score += pts * state.scoreMul; // scoreMul retained for future stacking; default 1
+      scoreEl.textContent = state.score;
+      spawnFood();
+    } else if(ateBonusIndex >= 0){
+      addParticles(head.x, head.y, 18, 2.5);
+      state.extraFoods.splice(ateBonusIndex,1);
+      const pts = (state.perk?.id === 'double') ? 2 : 1;
+      state.score += (1*pts);
+      scoreEl.textContent = state.score;
+    } else {
+      state.snake.pop();
+    }
+
+    // check win
+    if(state.score >= WIN_SCORE){
+      explode(head, true);
+      gameOver(true);
+      return;
+    }
+  }
+
+  function explode(cell, win=false){
+    addParticles(cell.x, cell.y, win?64:42, win?3.2:2.8);
+    state.wallFlash = 200;
+  }
+
+  function gameOver(win){
+    state.alive = false;
+    const title = win ? "You Win!" : "Game Over";
+    const desc = win
+      ? `Monochrome mastery unlocked. Press <span class="pill">R</span> to play again.`
+      : `That tail was inevitable. Press <span class="pill">R</span> to try again.`;
+    setTimeout(()=>showOverlay(title, desc), 250);
+  }
+
+  // ====== Perks ======
+  const PERKS = [
+    { id:'double', name:'Double Points', dur:15000, start: s => { s.scoreMul = 2; } , end: s => { s.scoreMul = 1; } },
+    { id:'slow',   name:'Slow Motion',   dur:15000, start: s => { s.tps = Math.max(5, Math.round(BASE_TPS*0.6)); speedEl.textContent=(s.tps/BASE_TPS).toFixed(1); }, end: s => { s.tps = BASE_TPS; speedEl.textContent="1.0"; } },
+    { id:'shrink', name:'Shrink (-3)',   dur:3000,  start: s => { for(let i=0;i<3 && s.snake.length>1;i++) s.snake.pop(); }, end: s => {} },
+    { id:'frenzy', name:'Food Frenzy',   dur:10000, start: s => { s.extraFoods = spawnExtraFoods(3); }, end: s => { s.extraFoods = []; } },
+    { id:'portal', name:'Wall Portals',  dur:20000, start: s => { s.wrapWalls = true; }, end: s => { s.wrapWalls = false; } },
+  ];
+
+  function spawnExtraFoods(n){
+    const set = new Set(state.snake.map(s=>`${s.x},${s.y}`));
+    set.add(`${state.food.x},${state.food.y}`);
+    const arr = [];
+    for(let i=0;i<n;i++){
+      const p = randomFreeCell(set);
+      arr.push(p); set.add(`${p.x},${p.y}`);
+    }
+    return arr;
+  }
+
+  let lastPerkId = null;
+  function triggerRandomPerk(){
+    let candidates = PERKS.filter(p => p.id !== lastPerkId);
+    const chosen = candidates[rng(0,candidates.length-1)];
+    startPerk(chosen);
+    lastPerkId = chosen.id;
+  }
+
+  function startPerk(perk){
+    endPerk(); // clear existing
+    state.perk = perk;
+    state.perkEndsAt = performance.now() + perk.dur;
+    perkNameEl.textContent = perk.name;
+    banner(`${perk.name}!`);
+    perk.start(state);
+    // animate meter
+    let start = performance.now();
+    function updateMeter(){
+      if(!state.perk || state.perk.id !== perk.id) return;
+      const now = performance.now();
+      const pct = Math.max(0, Math.min(1, (state.perkEndsAt - now)/perk.dur));
+      perkMeter.style.width = `${(1-pct)*100}%`;
+      if(pct>0) requestAnimationFrame(updateMeter);
+      else perkMeter.style.width = "100%";
+    }
+    perkMeter.style.width = "0%";
+    requestAnimationFrame(updateMeter);
+  }
+
+  function endPerk(){
+    if(state.perk){
+      try{ state.perk.end(state); }catch{}
+    }
+    state.perk = null;
+    perkNameEl.textContent = 'None';
+    perkMeter.style.width = "0%";
+  }
+
+  function banner(text){
+    perkBanner.textContent = text;
+    perkBanner.classList.remove('show');
+    // force reflow
+    void perkBanner.offsetWidth;
+    perkBanner.classList.add('show');
+    setTimeout(()=>perkBanner.classList.remove('show'), 1200);
+  }
+
+  // ====== Render ======
+  function draw(clear=false){
+    const now = performance.now();
+    const dt = now - state.lastFrame;
+    state.lastFrame = now;
+
+    // background
+    ctx.clearRect(0,0, CANVAS_SIZE, CANVAS_SIZE);
+    // flash on events
+    if(state.wallFlash>0){
+      ctx.fillStyle = COLORS.wallFlash;
+      ctx.globalAlpha = Math.min(0.25, state.wallFlash/200);
+      ctx.fillRect(0,0,CANVAS_SIZE,CANVAS_SIZE);
+      ctx.globalAlpha = 1;
+      state.wallFlash -= dt;
+    }
+
+    // foods
+    drawCell(state.food.x, state.food.y, COLORS.food);
+    for(const f of state.extraFoods) drawCell(f.x, f.y, COLORS.bonusFood, true);
+
+    // snake
+    state.snake.forEach((s, i)=>{
+      const isHead = i===0;
+      drawCell(s.x, s.y, isHead?COLORS.snakeHead:COLORS.snakeBody);
+      if(isHead){
+        // simple eye pixels (still grayscale)
+        ctx.fillStyle = "#77777b";
+        const px = s.x*CELL, py = s.y*CELL;
+        ctx.fillRect(px+12, py+6, 2,2);
+        ctx.fillRect(px+12, py+12, 2,2);
+      }
+    });
+
+    // particles
+    const parts = state.particles;
+    for(let i=parts.length-1;i>=0;i--){
+      const p = parts[i];
+      p.age += dt;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.002*dt;
+      const life = Math.max(0, 1 - p.age/p.life);
+      if(life<=0){ parts.splice(i,1); continue; }
+      ctx.globalAlpha = life*0.8;
+      ctx.fillStyle = `#d6d6da`;
+      ctx.fillRect(p.x, p.y, p.size, p.size);
+      ctx.globalAlpha = 1;
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  function drawCell(x,y,color,stroke=false){
+    const px = x*CELL, py=y*CELL;
+    ctx.fillStyle = color;
+    ctx.fillRect(px+1, py+1, CELL-2, CELL-2);
+    if(stroke){
+      ctx.strokeStyle = "#8c8c91";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(px+0.5, py+0.5, CELL-1, CELL-1);
+    }
+  }
+
+  // ====== Loop ======
+  function loop(){
+    const now = performance.now();
+    const dt = now - state.lastTick;
+    state.lastTick = now;
+    tick(dt);
+    requestAnimationFrame(loop);
+  }
+
+  function togglePause(){
+    if(!state.alive) return;
+    state.paused = !state.paused;
+    const btn = document.getElementById('btnPause');
+    btn.textContent = state.paused ? "Resume (Space)" : "Pause (Space)";
+  }
+
+  function restart(){
+    initGame();
+  }
+
+  // Buttons
+  document.getElementById('btnPause').addEventListener('click', togglePause);
+  document.getElementById('btnRestart').addEventListener('click', restart);
+  document.getElementById('btnRestart2').addEventListener('click', restart);
+
+  // Start
+  initGame();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
+
