@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tower of Hanoi — Dark Grayscale</title>
+  <style>
+    :root{
+      --bg:#0b0b0c;
+      --panel:#111214;
+      --accent:#bdbdbd;
+      --muted:#8b8b8b;
+      --glass: rgba(255,255,255,0.03);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;
+      background:linear-gradient(180deg,var(--bg),#070708);
+      color:var(--accent);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+
+    .card{
+      width:100%;
+      max-width:980px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);
+      border-radius:14px;
+      padding:22px;
+      box-shadow:0 8px 30px rgba(0,0,0,0.6);
+      border:1px solid rgba(255,255,255,0.03);
+    }
+
+    header{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:18px;
+    }
+    h1{font-size:18px;margin:0;font-weight:600}
+    .controls{display:flex;gap:12px;align-items:center}
+    button{background:var(--glass);border:1px solid rgba(255,255,255,0.04);color:var(--accent);padding:10px 16px;border-radius:10px;cursor:pointer;transition:all 0.2s ease;font-size:14px;font-weight:500}
+    button:hover{filter:brightness(1.2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.3)}
+    button:active{transform:translateY(0);transition:all 0.1s ease}
+    select{background:var(--glass);border:1px solid rgba(255,255,255,0.04);color:var(--accent);padding:8px 12px;border-radius:8px;cursor:pointer;transition:all 0.2s ease}
+    select:hover{filter:brightness(1.1)}
+
+    .game-area{display:flex;gap:18px;align-items:flex-end;justify-content:space-between;padding:16px;background:transparent}
+    .peg{flex:1;min-height:260px;display:flex;flex-direction:column;align-items:center;padding:12px;position:relative;transition:all 0.3s ease;border-radius:12px}
+    .peg:hover{background:rgba(255,255,255,0.02);transform:translateY(-2px)}
+    .stand{width:12px;height:220px;background:linear-gradient(180deg,#1a1a1a,#0d0d0d);border-radius:6px;position:absolute;top:12px;box-shadow:inset 0 -4px 8px rgba(0,0,0,0.6)}
+    .base{width:90%;height:12px;background:linear-gradient(90deg,#131313,#0a0a0a);border-radius:6px;position:absolute;bottom:34px}
+
+    .peg-title{font-size:13px;color:var(--muted);margin-top:10px;position:absolute;bottom:12px;transition:all 0.3s ease;font-weight:500}
+    .peg:hover .peg-title{color:var(--accent);text-shadow:0 0 8px rgba(255,255,255,0.1)}
+
+    /* disks */
+    .tower{display:flex;flex-direction:column-reverse;align-items:center;position:absolute;bottom:46px;width:220px}
+    .disk{
+      height:28px;border-radius:8px;margin-bottom:6px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#0b0b0c;font-weight:600;cursor:pointer;user-select:none;
+      transition:all 320ms cubic-bezier(.2,.8,.2,1);
+      box-shadow:0 6px 18px rgba(0,0,0,0.6);
+    }
+    .disk:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.7)}
+    .disk:active{transform:translateY(-3px);transition:all 150ms ease}
+
+    /* sizes (grayscale gradient) */
+    .d1{width:60px;background:linear-gradient(90deg,#dcdcdc,#bfbfbf)}
+    .d2{width:100px;background:linear-gradient(90deg,#d0d0d0,#a9a9a9)}
+    .d3{width:140px;background:linear-gradient(90deg,#c6c6c6,#9a9a9a)}
+    .d4{width:180px;background:linear-gradient(90deg,#bdbdbd,#8f8f8f)}
+    .d5{width:220px;background:linear-gradient(90deg,#b3b3b3,#858585)}
+
+    .status{display:flex;gap:12px;align-items:center;color:var(--muted);font-size:13px;margin-top:12px}
+
+    /* highlight when selected */
+    .selected{outline:3px solid rgba(255,255,255,0.12);outline-offset:2px;transform:translateY(-8px);box-shadow:0 14px 30px rgba(0,0,0,0.8);filter:brightness(1.1)}
+
+    /* modal popup */
+    .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);background:linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.7));opacity:0;pointer-events:none;transition:opacity 240ms}
+    .overlay.show{opacity:1;pointer-events:auto}
+    .modal{width:min(720px,92%);background:linear-gradient(180deg,#161617,#0d0d0e);border-radius:16px;padding:32px;border:1px solid rgba(255,255,255,0.06);text-align:center;transform:scale(.85) translateY(20px);opacity:0;animation:popIn 600ms forwards cubic-bezier(.175,.885,.32,1.275)}
+    @keyframes popIn{0%{transform:scale(.85) translateY(20px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
+
+    .trophy{width:96px;height:96px;margin:0 auto 18px auto;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#e8e8e8,#b8b8b8);border-radius:20px;box-shadow:0 12px 40px rgba(0,0,0,0.7);animation:trophyPulse 2s ease-in-out infinite alternate}
+    .trophy svg{display:block;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.4));animation:trophyRotate 3s ease-in-out infinite}
+    @keyframes trophyPulse{0%{transform:scale(1);box-shadow:0 12px 40px rgba(0,0,0,0.7)}100%{transform:scale(1.05);box-shadow:0 16px 50px rgba(0,0,0,0.8)}}
+    @keyframes trophyRotate{0%,100%{transform:rotate(0deg)}25%{transform:rotate(-3deg)}75%{transform:rotate(3deg)}}
+
+    .modal h2{margin:0 0 6px 0;font-size:20px}
+    .modal p{color:var(--muted);margin:0 0 18px;font-size:14px}
+
+    .celebrate{
+      display:flex;gap:8px;justify-content:center;align-items:center;margin-bottom:12px;position:relative;height:40px;overflow:visible
+    }
+    /* enhanced grayscale confetti — animated */
+    .confetti{position:absolute;left:0;right:0;top:0;height:1px;pointer-events:none}
+    .confetti i{position:absolute;bottom:0;width:10px;height:10px;border-radius:3px;background:linear-gradient(45deg,#f0f0f0,#c0c0c0);opacity:0;transform:translateY(0) rotate(10deg);animation:rise 1800ms cubic-bezier(.25,.46,.45,.94) forwards;box-shadow:0 2px 4px rgba(0,0,0,0.3)}
+    .confetti i:nth-child(1){left:8%;animation-delay:200ms;background:linear-gradient(45deg,#e8e8e8,#b8b8b8)}
+    .confetti i:nth-child(2){left:20%;animation-delay:300ms;background:linear-gradient(45deg,#d8d8d8,#a8a8a8)}
+    .confetti i:nth-child(3){left:32%;animation-delay:400ms;background:linear-gradient(45deg,#f0f0f0,#c0c0c0)}
+    .confetti i:nth-child(4){left:44%;animation-delay:500ms;background:linear-gradient(45deg,#e0e0e0,#b0b0b0)}
+    .confetti i:nth-child(5){left:56%;animation-delay:600ms;background:linear-gradient(45deg,#d0d0d0,#a0a0a0)}
+    .confetti i:nth-child(6){left:68%;animation-delay:700ms;background:linear-gradient(45deg,#e8e8e8,#b8b8b8)}
+    .confetti i:nth-child(7){left:80%;animation-delay:800ms;background:linear-gradient(45deg,#f0f0f0,#c0c0c0)}
+    .confetti i:nth-child(8){left:92%;animation-delay:900ms;background:linear-gradient(45deg,#d8d8d8,#a8a8a8)}
+    @keyframes rise{0%{opacity:0;transform:translateY(0) rotate(10deg) scale(0.5)}15%{opacity:1;transform:translateY(-20px) rotate(60deg) scale(1)}100%{opacity:0;transform:translateY(-140px) rotate(240deg) scale(0.8)}}
+
+    footer{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+    .hint{color:var(--muted);font-size:13px}
+
+    @media (max-width:760px){
+      .tower{width:160px}
+      .disk{height:24px}
+      .d5{width:180px}
+    }
+  </style>
+</head>
+<body>
+  <div class="card" role="application" aria-labelledby="title">
+    <header>
+      <div>
+        <h1 id="title">Tower of Hanoi</h1>
+        <div style="color:var(--muted);font-size:13px;margin-top:6px">Click a peg to pick its top disk, then click another peg to place it. Move all disks to the rightmost peg.</div>
+      </div>
+      <div class="controls">
+        <label style="color:var(--muted);font-size:13px">Disks</label>
+        <select id="diskCount" aria-label="Number of disks">
+          <option>3</option>
+          <option selected>4</option>
+          <option>5</option>
+        </select>
+        <button id="resetBtn">Reset</button>
+        <button id="solveBtn">Auto-solve</button>
+      </div>
+    </header>
+
+    <main class="game-area" id="game">
+      <div class="peg" data-peg="0">
+        <div class="stand" aria-hidden="true"></div>
+        <div class="base" aria-hidden="true"></div>
+        <div class="tower" aria-label="peg 1" data-tower></div>
+        <div class="peg-title">Peg A</div>
+      </div>
+
+      <div class="peg" data-peg="1">
+        <div class="stand" aria-hidden="true"></div>
+        <div class="base" aria-hidden="true"></div>
+        <div class="tower" aria-label="peg 2" data-tower></div>
+        <div class="peg-title">Peg B</div>
+      </div>
+
+      <div class="peg" data-peg="2">
+        <div class="stand" aria-hidden="true"></div>
+        <div class="base" aria-hidden="true"></div>
+        <div class="tower" aria-label="peg 3" data-tower></div>
+        <div class="peg-title">Peg C</div>
+      </div>
+    </main>
+
+    <div class="status">
+      <div id="moves">Moves: 0</div>
+      <div id="optimal" style="margin-left:6px">Optimal: 0</div>
+    </div>
+
+    <footer>
+      <div class="hint">Tip: You can watch the auto-solver to learn the algorithm.
+        <br>
+        Controls: Click a peg to pick its top disk, then click another peg to place it.
+      </div>
+      <div style="color:var(--muted);font-size:13px">Made with 🩶 — Grayscale Game Zone!</div>
+    </footer>
+  </div>
+
+  <!-- Winning modal -->
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true">
+    <div class="modal" role="document">
+      <div class="trophy" aria-hidden="true">
+        <!-- enhanced trophy icon with victory theme -->
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <!-- Trophy cup -->
+          <path d="M8 5v6a4 4 0 0 0 8 0V5H8z" fill="#e0e0e0" stroke="#b8b8b8" stroke-width="0.5"/>
+          <!-- Trophy handles -->
+          <path d="M6 7h2v2a1 1 0 0 1-2 0V7zM16 7h2v2a1 1 0 0 1-2 0V7z" fill="#d0d0d0" stroke="#a8a8a8" stroke-width="0.5"/>
+          <!-- Trophy base -->
+          <rect x="6" y="17" width="12" height="2" rx="1" fill="#b8b8b8"/>
+          <!-- Trophy stem -->
+          <rect x="11" y="13" width="2" height="4" fill="#c0c0c0"/>
+          <!-- Crown/star on top -->
+          <path d="M12 2l1.5 3 3.5.5-2.5 2.5.5 3.5L12 10l-3 1.5.5-3.5L7 5.5l3.5-.5L12 2z" fill="#f0f0f0" stroke="#d0d0d0" stroke-width="0.3"/>
+        </svg>
+      </div>
+      <h2>Congratulations — You won!</h2>
+      <p id="winMoves">You solved the puzzle in 0 moves.</p>
+      <div class="celebrate">
+        <div class="confetti" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button id="playAgain">Play Again</button>
+        <button id="closeWin">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Basic Tower of Hanoi implementation with UI
+    (function(){
+      const towers = [[],[],[]];
+      let selectedPeg = null;
+      let moves = 0;
+      let diskCount = 4;
+      let solving = false;
+      const towerEls = document.querySelectorAll('[data-tower]');
+      const movesEl = document.getElementById('moves');
+      const optimalEl = document.getElementById('optimal');
+      const overlay = document.getElementById('overlay');
+      const winMoves = document.getElementById('winMoves');
+
+      function init(n){
+        diskCount = Number(document.getElementById('diskCount').value) || 4;
+        for(let i=0;i<3;i++) towers[i]=[];
+        for(let i=n;i>=1;i--) towers[0].push(i);
+        moves = 0;
+        updateUI();
+        optimalEl.textContent = 'Optimal: ' + (Math.pow(2,n)-1);
+      }
+
+      function updateUI(){
+        movesEl.textContent = 'Moves: ' + moves;
+        towerEls.forEach((el,idx)=>{
+          el.innerHTML='';
+          towers[idx].forEach(size=>{
+            const disk = document.createElement('div');
+            disk.className = 'disk d'+size;
+            disk.textContent = size;
+            disk.dataset.size = size;
+            disk.draggable = false;
+            disk.title = 'Disk ' + size;
+            // attach click handler only to top disk
+            el.appendChild(disk);
+          });
+          // highlight top disk as clickable
+          if(towers[idx].length){
+            const top = el.lastElementChild;
+            top.addEventListener('click', ()=>onDiskClick(idx));
+            top.style.cursor = 'pointer';
+          }
+        });
+        // clear selection highlight
+        document.querySelectorAll('.disk').forEach(d=>d.classList.remove('selected'));
+        if(selectedPeg!==null){
+          const tower = towerEls[selectedPeg];
+          const top = tower.lastElementChild;
+          if(top) top.classList.add('selected');
+        }
+      }
+
+      function onDiskClick(pegIdx){
+        if(solving) return; // disable interaction while auto-solving
+        if(selectedPeg===null){
+          // pick up
+          if(towers[pegIdx].length===0) return;
+          selectedPeg = pegIdx;
+          updateUI();
+        } else if(selectedPeg===pegIdx){
+          // unselect
+          selectedPeg = null; updateUI();
+        } else {
+          // try move
+          const from = selectedPeg; const to = pegIdx;
+          const disk = towers[from][towers[from].length-1];
+          const topTo = towers[to][towers[to].length-1];
+          if(!topTo || disk < topTo){
+            towers[to].push(towers[from].pop());
+            moves++;
+            selectedPeg = null;
+            updateUI();
+            checkWin();
+          } else {
+            // illegal move — brief shake
+            flashIllegal(to);
+          }
+        }
+      }
+
+      function flashIllegal(idx){
+        const tower = towerEls[idx];
+        tower.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:280});
+      }
+
+      function checkWin(){
+        if(towers[2].length === diskCount){
+          // ensure order
+          for(let i=0;i<diskCount-1;i++){
+            if(towers[2][i] < towers[2][i+1]) return; // not correct ordering
+          }
+          showWin();
+        }
+      }
+
+      function showWin(){
+        overlay.classList.add('show');
+        winMoves.textContent = 'You solved the puzzle in ' + moves + ' moves. Optimal is ' + (Math.pow(2,diskCount)-1) + '.';
+        // restart selected flag
+        selectedPeg = null;
+      }
+
+      function hideWin(){ overlay.classList.remove('show'); }
+
+      // event wiring
+      document.querySelectorAll('.peg').forEach(p=>{
+        p.addEventListener('click',(e)=>{
+          const idx = Number(p.dataset.peg);
+          // if clicked area but not top disk, still act as selecting peg
+          onDiskClick(idx);
+        });
+      });
+
+      document.getElementById('resetBtn').addEventListener('click', ()=>{
+        if(solving) return;
+        init(diskCount);
+      });
+
+      document.getElementById('diskCount').addEventListener('change', (e)=>{
+        const n = Number(e.target.value);
+        init(n);
+      });
+
+      document.getElementById('playAgain').addEventListener('click', ()=>{
+        hideWin(); init(diskCount);
+      });
+      document.getElementById('closeWin').addEventListener('click', ()=>{
+        hideWin();
+      });
+
+      // simple auto-solver (recursive) with visual moves
+      document.getElementById('solveBtn').addEventListener('click', async ()=>{
+        if(solving) return;
+        solving = true;
+        const movesList = [];
+        function hanoi(n, from, aux, to){
+          if(n===0) return;
+          hanoi(n-1, from, to, aux);
+          movesList.push([from,to]);
+          hanoi(n-1, aux, from, to);
+        }
+        hanoi(diskCount,0,1,2);
+        for(const [f,t] of movesList){
+          await doMove(f,t);
+          await sleep(220);
+        }
+        solving = false;
+        checkWin();
+      });
+
+      function doMove(from,to){
+        return new Promise(res=>{
+          const disk = towers[from].pop();
+          towers[to].push(disk);
+          moves++;
+          updateUI();
+          setTimeout(res,180);
+        });
+      }
+
+      function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+      // init
+      init(diskCount);
+    })();
+  </script>
+</body>
+</html>
