@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Grayscale Pong — Staged Game</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background-color: #1a1a1a;
+      if (isWin) {
+        popup.innerHTML = `
+          <div style="font-size: 48px; margin-bottom: 10px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+          </div>
+          Victory!<br><br>You Won!<br><br><small>Press Enter to Play Again</small>`;
+      } else {
+        popup.innerHTML = `
+          <div style="font-size: 48px; margin-bottom: 10px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM7 7h10v2H7V7zm0 4h7v2H7v-2z"/>
+            </svg>
+          </div>
+          Defeat<br><br>Computer Wins!<br><br><small>Press Enter to Try Again</small>`;
+      } font-family: 'Segoe UI', Tahoma, sans-serif;
+      color: #ddd;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    canvas {
+      background-color: #2e2e2e;
+      border: 2px solid #555;
+    }
+    #overlay {
+      position: absolute;
+      text-align: center;
+      color: #eee;
+      font-size: 24px;
+      padding: 20px;
+      display: none;
+      width: 100%;
+      top: 30%;
+      pointer-events: none;
+    }
+    .win-popup {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #e0e0e0, #bdbdbd);
+      color: #1a1a1a;
+      padding: 30px 40px;
+      border-radius: 15px;
+      border: 2px solid #888;
+      font-size: 28px;
+      font-weight: bold;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(224, 224, 224, 0.3);
+      animation: winAnimation 0.8s ease-out;
+      z-index: 1000;
+    }
+    .lose-popup {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #666, #444);
+      color: #ddd;
+      padding: 30px 40px;
+      border-radius: 15px;
+      border: 2px solid #333;
+      font-size: 28px;
+      font-weight: bold;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(68, 68, 68, 0.4);
+      animation: loseAnimation 0.8s ease-out;
+      z-index: 1000;
+    }
+    @keyframes winAnimation {
+      0% {
+        transform: translate(-50%, -50%) scale(0.5) rotate(-10deg);
+        opacity: 0;
+      }
+      50% {
+        transform: translate(-50%, -50%) scale(1.1) rotate(5deg);
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(1) rotate(0deg);
+        opacity: 1;
+      }
+    }
+    @keyframes loseAnimation {
+      0% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0;
+      }
+      30% {
+        transform: translate(-50%, -50%) scale(1.05);
+      }
+      60% {
+        transform: translate(-50%, -50%) scale(0.95);
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+      }
+    }
+    #scoreboard {
+      position: absolute;
+      top: 15px;
+      font-size: 20px;
+      color: #ccc;
+    }
+    #stage {
+      position: absolute;
+      top: 50px;
+      font-size: 18px;
+      color: #bbb;
+    }
+    #controls {
+      position: absolute;
+      bottom: 15px;
+      left: 15px;
+      font-size: 14px;
+      color: #888;
+      line-height: 1.4;
+    }
+    #credits {
+      position: absolute;
+      bottom: 15px;
+      right: 15px;
+      font-size: 14px;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="500"></canvas>
+  <div id="overlay"></div>
+  <div id="scoreboard">Player: 0 | Computer: 0</div>
+  <div id="stage">Stage: 1</div>
+  <div id="controls">
+    Controls:<br>
+    W/S or ↑/↓ - Move paddle<br>
+    Hold for faster movement<br>
+    Enter - Start/Continue
+  </div>
+  <div id="credits">Made with 🩶 - GrayscaleGameZone</div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const overlay = document.getElementById('overlay');
+    const scoreDisplay = document.getElementById('scoreboard');
+    const stageDisplay = document.getElementById('stage');
+
+    const paddleWidth = 10;
+    const paddleHeight = 100;
+    const ballSize = 10;
+    const maxBallSpeed = 20;
+
+    let playerY = canvas.height / 2 - paddleHeight / 2;
+    let compY = canvas.height / 2 - paddleHeight / 2;
+
+    let ballX = canvas.width / 2;
+    let ballY = canvas.height / 2;
+    let ballSpeedX = 0;
+    let ballSpeedY = 0;
+
+    let playerScore = 0;
+    let compScore = 0;
+    let currentStage = 1;
+
+    const scoreToWin = 5;  // first to 5 wins
+    let isGameOver = false;
+    let isGamePaused = true;
+
+    let upPressed = false;
+    let downPressed = false;
+    let keyHoldTime = 0;
+    const basePlayerSpeed = 6;
+    const maxPlayerSpeed = 12;
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
+        if (!upPressed) keyHoldTime = 0;
+        upPressed = true;
+      }
+      if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
+        if (!downPressed) keyHoldTime = 0;
+        downPressed = true;
+      }
+      // Start or restart
+      if (isGamePaused && e.key === 'Enter') {
+        if (isGameOver) {
+          restartGame();
+        } else {
+          startRound();
+        }
+      }
+    });
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
+        upPressed = false;
+        keyHoldTime = 0;
+      }
+      if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
+        downPressed = false;
+        keyHoldTime = 0;
+      }
+    });
+
+    function showOverlay(msg) {
+      overlay.innerHTML = msg;
+      overlay.style.display = 'block';
+    }
+    function hideOverlay() {
+      overlay.style.display = 'none';
+    }
+
+    function resetBall(direction = 1) {
+      ballX = canvas.width / 2;
+      ballY = canvas.height / 2;
+      // Base speed depends on stage
+      const base = 4 + currentStage * 0.8;
+      ballSpeedX = base * direction;
+      ballSpeedY = (Math.random() * 4 + 2) * (Math.random() > 0.5 ? 1 : -1);
+    }
+
+    function startRound() {
+      isGamePaused = false;
+      hideOverlay();
+      resetBall(Math.random() > 0.5 ? 1 : -1);
+    }
+
+    function restartGame() {
+      playerScore = 0;
+      compScore = 0;
+      currentStage = 1;
+      isGameOver = false;
+      isGamePaused = true;
+      updateScoresDisplay();
+      stageDisplay.textContent = `Stage: ${currentStage}`;
+      showOverlay(`Grayscale Pong — Staged Mode<br><br>First to ${scoreToWin} wins<br><br>Press Enter to Start`);
+    }
+
+    function showAnimatedPopup(isWin, winner) {
+      // Remove any existing popups
+      const existingPopups = document.querySelectorAll('.win-popup, .lose-popup');
+      existingPopups.forEach(popup => popup.remove());
+      
+      const popup = document.createElement('div');
+      popup.className = isWin ? 'win-popup' : 'lose-popup';
+      
+      if (isWin) {
+        popup.innerHTML = `🏆 Victory!<br><br>You Won!<br><br><small>Press Enter to Play Again</small>`;
+      } else {
+        popup.innerHTML = `💀 Defeat<br><br>Computer Wins!<br><br><small>Press Enter to Try Again</small>`;
+      }
+      
+      document.body.appendChild(popup);
+      
+      // Auto-hide popup after animation and show overlay
+      setTimeout(() => {
+        popup.style.opacity = '0';
+        popup.style.transition = 'opacity 0.5s ease-out';
+        setTimeout(() => {
+          popup.remove();
+          showOverlay(`🏁 Game Over<br><br>${winner} wins!<br><br>Press Enter to Restart`);
+        }, 500);
+      }, 2500);
+    }
+
+    function endGame(winner) {
+      isGameOver = true;
+      isGamePaused = true;
+      
+      // Show animated popup based on winner
+      const isPlayerWin = winner === "Player";
+      showAnimatedPopup(isPlayerWin, winner);
+    }
+
+    function advanceStage() {
+      currentStage++;
+      stageDisplay.textContent = `Stage: ${currentStage}`;
+    }
+
+    function updateScoresDisplay() {
+      scoreDisplay.textContent = `Player: ${playerScore} | Computer: ${compScore}`;
+    }
+
+    function update() {
+      if (isGamePaused) return;
+
+      // Move player paddle with acceleration for held keys
+      if (upPressed || downPressed) {
+        keyHoldTime++;
+        const speedMultiplier = Math.min(1 + keyHoldTime * 0.02, maxPlayerSpeed / basePlayerSpeed);
+        const currentSpeed = basePlayerSpeed * speedMultiplier;
+        
+        if (upPressed && playerY > 0) playerY -= currentSpeed;
+        if (downPressed && playerY < canvas.height - paddleHeight) playerY += currentSpeed;
+      }
+
+      // Move computer paddle (simple AI)
+      const compCenter = compY + paddleHeight / 2;
+      if (compCenter < ballY - 20) compY += 4 + currentStage * 0.5;
+      else if (compCenter > ballY + 20) compY -= 4 + currentStage * 0.5;
+
+      // Move ball
+      ballX += ballSpeedX;
+      ballY += ballSpeedY;
+
+      // Ball bounce off top/bottom
+      if (ballY <= 0 || ballY >= canvas.height) {
+        ballSpeedY *= -1;
+      }
+
+      // Collision with player paddle
+      if (
+        ballX - ballSize < paddleWidth &&
+        ballY > playerY &&
+        ballY < playerY + paddleHeight
+      ) {
+        ballSpeedX *= -1;
+        ballX = paddleWidth + ballSize;
+        // increase speed (but clamp)
+        if (Math.abs(ballSpeedX) < maxBallSpeed) {
+          ballSpeedX *= 1.1;
+          ballSpeedY *= 1.05;
+        }
+      }
+
+      // Collision with computer paddle
+      if (
+        ballX + ballSize > canvas.width - paddleWidth &&
+        ballY > compY &&
+        ballY < compY + paddleHeight
+      ) {
+        ballSpeedX *= -1;
+        ballX = canvas.width - paddleWidth - ballSize;
+        if (Math.abs(ballSpeedX) < maxBallSpeed) {
+          ballSpeedX *= 1.1;
+          ballSpeedY *= 1.05;
+        }
+      }
+
+      // Check if ball hits left or right wall
+      if (ballX < 0) {
+        // Computer scores
+        compScore++;
+        updateScoresDisplay();
+        if (compScore >= scoreToWin) {
+          endGame("Computer");
+        } else {
+          advanceStage();
+          isGamePaused = true;
+          showOverlay(`Point for Computer<br><br>Press Enter for next round`);
+        }
+      } else if (ballX > canvas.width) {
+        // Player scores
+        playerScore++;
+        updateScoresDisplay();
+        if (playerScore >= scoreToWin) {
+          endGame("Player");
+        } else {
+          advanceStage();
+          isGamePaused = true;
+          showOverlay(`Point for You!<br><br>Press Enter for next round`);
+        }
+      }
+    }
+
+    function drawRect(x, y, w, h, c) {
+      ctx.fillStyle = c;
+      ctx.fillRect(x, y, w, h);
+    }
+    function drawBall(x, y, size, c) {
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function draw() {
+      // background
+      drawRect(0, 0, canvas.width, canvas.height, '#2e2e2e');
+      // paddles
+      drawRect(0, playerY, paddleWidth, paddleHeight, '#aaa');
+      drawRect(canvas.width - paddleWidth, compY, paddleWidth, paddleHeight, '#888');
+      // ball
+      drawBall(ballX, ballY, ballSize, '#ccc');
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // Initial overlay
+    showOverlay(`Grayscale Pong — Staged Mode<br><br>First to ${scoreToWin} wins<br><br>Press Enter to Start`);
+    loop();
+  </script>
+</body>
+</html>

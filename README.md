@@ -26,8 +26,23 @@
 Classic brick breaking game with smooth physics and elegant grayscale design
 
   
+    
 
-### 2. [🐍 Snake](https://yatharthandharia.github.io/games-grayscale/snake.html)
+### 2. [🐦 Flappy Ball](https://yatharthandharia.github.io/games-grayscale/flappyball.html)
+
+  
+
+Navigate through obstacles in this addictive side-scrolling adventure with precise controls
+
+  
+
+### 3. [🏓 Paddle Pong](https://yatharthandharia.github.io/games-grayscale/paddlepong.html)
+
+  
+
+Classic arcade pong game with smooth paddle controls and competitive gameplay
+
+### 4. [🐍 Snake](https://yatharthandharia.github.io/games-grayscale/snake.html)
 
   
 
@@ -35,7 +50,7 @@ The timeless snake game reimagined with modern controls and sleek visuals
 
   
 
-### 3. [⌗ TicTacToe](https://yatharthandharia.github.io/games-grayscale/tictactoe.html)
+### 5. [⌗ TicTacToe](https://yatharthandharia.github.io/games-grayscale/tictactoe.html)
 
   
 
@@ -43,12 +58,11 @@ Strategic X's and O's game with intelligent AI and beautiful animations
 
   
 
-### 4. [🗼 Tower Of Hanoi](https://yatharthandharia.github.io/games-grayscale/towerofhanoi.html)
+### 6. [🗼 Tower Of Hanoi](https://yatharthandharia.github.io/games-grayscale/towerofhanoi.html)
 
   
 
 Mind-bending puzzle game with auto-solver and smooth disk movements
-
   
 
 ---

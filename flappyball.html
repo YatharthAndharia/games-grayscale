@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Grayscale Flappy Bird</title>
+<style>
+  :root{
+    --bg:#111; --fg:#ddd; --ui-bg: rgba(0,0,0,0.5); --accent:#bbb;
+  }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:var(--fg);}
+  body > * { filter: grayscale(100%); }
+  #game-wrap{display:flex;align-items:center;justify-content:center;height:100vh;padding:20px}
+  canvas{background: linear-gradient(#1b1b1b,#0d0d0d);border-radius:12px;box-shadow: 0 10px 40px rgba(0,0,0,0.6)}
+  .hud{position:absolute;left:20px;top:16px;display:flex;gap:14px}
+  .hud .pill{background:var(--ui-bg);padding:6px 12px;border-radius:999px}
+
+  .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);opacity:0;pointer-events:none;transition:.3s}
+  .overlay.show{opacity:1;pointer-events:auto}
+  .popup{background:#0f0f0f;border-radius:14px;padding:18px;width:90%;max-width:420px;text-align:center;animation:popIn .5s}
+  @keyframes popIn{0%{transform:scale(.8);opacity:0}100%{transform:scale(1);opacity:1}}
+  .hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.05);padding:6px 10px;border-radius:999px;font-size:13px}
+</style>
+</head>
+<body>
+<div id="game-wrap">
+  <div style="position:relative;">
+    <canvas id="game" width="480" height="680"></canvas>
+    <div class="hud"><div class="pill">Score: <span id="score">0</span></div><div class="pill">High: <span id="high">0</span></div></div>
+    <div class="overlay" id="overlay"><div class="popup"><h2 id="lose-title">Game Over</h2><p>Score <span id="lose-score">0</span> • High <span id="lose-high">0</span></p><button id="restart">Restart</button></div></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const c=document.getElementById('game'),ctx=c.getContext('2d');
+  const W=c.width,H=c.height;
+  const scoreEl=document.getElementById('score'),highEl=document.getElementById('high');
+  const overlay=document.getElementById('overlay'),loseScore=document.getElementById('lose-score'),loseHigh=document.getElementById('lose-high'),restart=document.getElementById('restart');
+
+  let bird,pipes,score,high,frames,gravity,pipeSpeed,gap,running,gameState;
+  const GRAVITY=0.45,FLAP=-8.5,PIPEW=70;
+  const GAME_STATES = {WAITING: 'waiting', PLAYING: 'playing', GAME_OVER: 'game_over'};
+  const palette={sky:"#0f0f0f",bird:"#ddd",pipe:"#2b2b2b",ground:"#070707",text:"#eee"};
+
+  high=parseInt(localStorage.getItem("flappy_high")||"0");
+  highEl.textContent=high;
+
+  function init(){
+    bird={x:W*0.28,y:H*0.45,r:16,dy:0};
+    pipes=[];score=0;frames=0;gravity=GRAVITY;pipeSpeed=2.8;gap=170;running=true;gameState=GAME_STATES.WAITING;
+    overlay.classList.remove("show");
+    loop();
+  }
+
+  function spawnPipe(){
+    const top=50+Math.random()*(H-300);pipes.push({x:W+30,top,bottom:top+gap,passed:false});
+  }
+
+
+  function physics(){
+    if(gameState!==GAME_STATES.PLAYING)return;
+    bird.dy+=gravity;bird.y+=bird.dy;
+    if(frames%90===0)spawnPipe();
+    for(const p of pipes){p.x-=pipeSpeed;if(!p.passed&&p.x+PIPEW<bird.x){p.passed=true;score++;updateScore();}}
+    pipes=pipes.filter(p=>p.x>-PIPEW);
+    if(bird.y+bird.r>H-60||bird.y<0)gameOver();
+    for(const p of pipes)if(hitPipe(p))gameOver();
+  }
+
+  function hitPipe(p){return circleRect(bird.x,bird.y,bird.r,p.x,0,PIPEW,p.top)||circleRect(bird.x,bird.y,bird.r,p.x,p.bottom,PIPEW,H-p.bottom);}
+  function circleRect(cx,cy,r,rx,ry,rw,rh){const nx=Math.max(rx,Math.min(cx,rx+rw)),ny=Math.max(ry,Math.min(cy,ry+rh));return (cx-nx)**2+(cy-ny)**2<=r*r;}
+
+  function draw(){
+    ctx.fillStyle=palette.sky;ctx.fillRect(0,0,W,H);
+    ctx.fillStyle=palette.pipe;
+    for(const p of pipes){
+      ctx.fillRect(p.x,0,PIPEW,p.top);
+      ctx.fillRect(p.x,p.bottom,PIPEW,H-p.bottom);
+      // Add pipe highlights for better visibility
+      ctx.fillStyle="#3a3a3a";
+      ctx.fillRect(p.x-2,p.top-20,PIPEW+4,20);
+      ctx.fillRect(p.x-2,p.bottom,PIPEW+4,20);
+      ctx.fillStyle=palette.pipe;
+    }
+    ctx.fillStyle=palette.ground;ctx.fillRect(0,H-60,W,60);
+    // Add ground pattern
+    ctx.fillStyle="#0a0a0a";
+    for(let i=0;i<W;i+=20){ctx.fillRect(i,H-60,1,60);}
+    
+    // Bird with better visibility
+    ctx.fillStyle=palette.bird;ctx.beginPath();ctx.arc(bird.x,bird.y,bird.r,0,Math.PI*2);ctx.fill();
+    // Bird highlight
+    ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(bird.x-4,bird.y-4,bird.r*0.3,0,Math.PI*2);ctx.fill();
+    
+    ctx.fillStyle=palette.text;ctx.font="bold 40px Arial";ctx.textAlign="center";ctx.fillText(score,W/2,80);
+    
+    // Show start message when waiting
+    if(gameState===GAME_STATES.WAITING){
+      ctx.fillStyle="rgba(0,0,0,0.6)";ctx.fillRect(0,0,W,H);
+      ctx.fillStyle=palette.text;ctx.font="bold 32px Arial";ctx.textAlign="center";
+      ctx.globalAlpha=0.5;
+      ctx.fillText("Press SPACE or Click to Start",W/2,2*H/3);
+    }
+  }
+
+  function loop(){if(!running)return;physics();draw();frames++;requestAnimationFrame(loop);}
+  function flap(){
+    if(gameState===GAME_STATES.WAITING){
+      gameState=GAME_STATES.PLAYING;
+    } else if(gameState===GAME_STATES.PLAYING){
+      bird.dy=FLAP;
+    }
+  }
+  function updateScore(){if(score>high){high=score;localStorage.setItem("flappy_high",high);}scoreEl.textContent=score;highEl.textContent=high;}
+  function gameOver(){gameState=GAME_STATES.GAME_OVER;running=false;loseScore.textContent=score;loseHigh.textContent=high;overlay.classList.add("show");}
+
+  document.addEventListener("keydown",e=>{
+    if(e.code==="Space"||e.code==="ArrowUp"||e.key===" "||e.key==="ArrowUp"){
+      e.preventDefault();
+      if(gameState===GAME_STATES.GAME_OVER){
+        init();
+      } else if(running){
+        flap();
+      }
+    }
+  });
+  c.addEventListener("mousedown",()=>{if(running)flap();});
+  c.addEventListener("touchstart",e=>{e.preventDefault();if(running)flap();},{passive:false});
+  restart.onclick=init;
+  
+  init();
+})();
+</script>
+</body>
+</html>
