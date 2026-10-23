@@ -542,15 +542,15 @@
     'use strict';
 
     const GAMES = [
-      { id:'brick',  name:'Brick Ball',     href:'brickball.html',     blurb:'Break into sealed steel formations across 10 stages, then face the final boss. 9 power-ups.', tags:['arcade','boss'], ctl:['Keys','Mouse'] },
+      { id:'space',  name:'Space Impact',   href:'spaceimpact.html',   blurb:'Nokia-style shooter: 7 levels, 7 bosses, special weapons and gun upgrades.', tags:['arcade','boss','touch'], ctl:['Keys','Mouse','Touch'] },
       { id:'pang',   name:'Pang',           href:'pang.html',          blurb:'Fire your harpoon, split the bouncing balls and pop them all across 12 stages and a boss.', tags:['arcade','boss'], ctl:['Keys','Mouse'] },
-      { id:'pong',   name:'Paddle Pong',    href:'paddlepong.html',    blurb:'Air hockey tournament: 8 AI rivals with their own wild tables, or go head to head locally.', tags:['arcade','2p','boss','touch'], ctl:['Mouse','Touch','Keys'] },
+      { id:'brick',  name:'Brick Ball',     href:'brickball.html',     blurb:'Break into sealed steel formations across 10 stages, then face the final boss. 9 power-ups.', tags:['arcade','boss'], ctl:['Keys','Mouse'] },
       { id:'bubble', name:'Bubble Shooter', href:'bubbleshooter.html', blurb:'Match three, chain combos and cut the threads to drop whole clusters. The one game in colour.', tags:['arcade','puzzle','touch'], ctl:['Mouse','Touch','Keys'] },
-      { id:'snake',  name:'Snake',          href:'snake.html',         blurb:'The timeless classic, reimagined with modern controls, perks and sleek visuals.', tags:['arcade'], ctl:['Keys'] },
+      { id:'pong',   name:'Paddle Pong',    href:'paddlepong.html',    blurb:'Air hockey tournament: 8 AI rivals with their own wild tables, or go head to head locally.', tags:['arcade','2p','boss','touch'], ctl:['Mouse','Touch','Keys'] },
+      { id:'hanoi',  name:'Tower of Hanoi', href:'towerofhanoi.html',  blurb:'The mind-bending disk puzzle. Stuck? Watch the auto-solver finish it for you.', tags:['puzzle','touch'], ctl:['Tap','Click'] },
       { id:'flappy', name:'Flappy Ball',    href:'flappyball.html',    blurb:'One button. Endless pipes. Thread the gaps and chase your high score.', tags:['arcade','touch'], ctl:['Tap','Space'] },
       { id:'ttt',    name:'Tic Tac Toe',    href:'tictactoe.html',     blurb:'From Easy to Unbeatable AI, or pass the device to a friend for 2 players.', tags:['puzzle','2p','touch'], ctl:['Tap','Click'] },
-      { id:'hanoi',  name:'Tower of Hanoi', href:'towerofhanoi.html',  blurb:'The mind-bending disk puzzle. Stuck? Watch the auto-solver finish it for you.', tags:['puzzle','touch'], ctl:['Tap','Click'] },
-      { id:'space',  name:'Space Impact',   href:'spaceimpact.html',   blurb:'Nokia-style shooter: 7 levels, 7 bosses, special weapons and gun upgrades.', tags:['arcade','boss','touch'], ctl:['Keys','Mouse','Touch'] },
+      { id:'snake',  name:'Snake',          href:'snake.html',         blurb:'The timeless classic, reimagined with modern controls, perks and sleek visuals.', tags:['arcade'], ctl:['Keys'] },
     ];
 
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
